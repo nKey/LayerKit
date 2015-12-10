@@ -1,5 +1,32 @@
 # LayerKit Change Log
 
+## 0.17.4
+
+#### Public API changes
+
+* Added nullability annotations and type hints to the public API for Objective C generics.
+
+#### Bug Fixes
+
+* Fixes the issue where a locally deleted conversation gets restored without metadata.
+* Fixes an issue which could prevent creating new conversations.
+* Fixes compatibility issues with XCode 7.2.
+
+#### Enhancements
+
+* Client tries to keep the connection open even if the app gets completely suspended, which results in faster resumption when app is brought into the foreground.
+
+## 0.17.3
+
+#### Bug Fixes
+
+* Improved stability of the SDK.
+* Fixes the assertion issue related to receiving distinct conversations with the same set of participants after a conversation with the same set of participants was deleted.
+* Fixes the issue that would cause the `Failed to persist a stream with client_id = nil` assertion.
+* Fixes the intermittent conversation metadata update failures.
+* Fixes a potential crash related with participant removal.
+* Fixes the issue where deleting an active (chatty) conversation might raise an exception.
+
 ## 0.17.2
 
 #### Enhancements
