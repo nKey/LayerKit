@@ -13,8 +13,8 @@
 /**
  @abstract A type representing an absolute logical position of an object within a sequence.
  */
-typedef uint64_t LYRPosition;
-#define LYRPositionNotDefined UINT64_MAX
+typedef int64_t LYRPosition;
+#define LYRPositionNotDefined INT64_MAX
 
 /**
  @abstract A type representing a content size in bytes.
@@ -26,18 +26,19 @@ typedef uint64_t LYRSize;
  @abstract The `LYRDeletionMode` enumeration defines the available modes for deleting content.
  */
 typedef NS_ENUM(NSUInteger, LYRDeletionMode) {
+
     /**
-     @abstract Content is deleted from the current device only. This is an unsynchronized delete and content
-     will be synchronized to other devices and will be resynchronized if the client is deauthenticated.
+     @abstract Content is deleted for only the currently authenticated user. The deletion will also be synchronized 
+     among all other devices for the current user.
      */
-    LYRDeletionModeLocal            = 0,
+    LYRDeletionModeMyDevices                = 1,
     
     /**
      @abstract Content is deleted from all devices of all participants. This is a synchronized, permanent delete
      that results in content being deleted from the devices of existing users who have previously synchronized and
      makes the content unavailable for synchronization to new participants or devices.
      **/
-    LYRDeletionModeAllParticipants  = 2
+    LYRDeletionModeAllParticipants          = 2
 };
 
 ///---------------------
@@ -48,19 +49,6 @@ typedef NS_ENUM(NSInteger, LYRObjectChangeType) {
 	LYRObjectChangeTypeCreate   = 0,
 	LYRObjectChangeTypeUpdate   = 1,
 	LYRObjectChangeTypeDelete   = 2
-};
-
-///-----------------------
-/// @name Typing Indicator
-///-----------------------
-
-/**
- @abstract The `LYRTypingIndicator` enumeration describes the states of a typing status of a participant in a conversation.
- */
-typedef NS_ENUM(NSUInteger, LYRTypingIndicator) {
-    LYRTypingDidBegin   = 0,
-    LYRTypingDidPause   = 1,
-    LYRTypingDidFinish  = 2
 };
 
 ///-----------------------
@@ -75,7 +63,43 @@ typedef NS_ENUM(NSInteger, LYRContentTransferType) {
     LYRContentTransferTypeUpload                = 1
 };
 
+///-------------------------------
+/// @name Synchronization Policies
+///-------------------------------
 
+typedef NS_ENUM(NSUInteger, LYRClientSynchronizationPolicy) {
+    /**
+     @abstract Configures the client to synchronize the complete history of each conversation.
+     */
+    LYRClientSynchronizationPolicyCompleteHistory   = 1,
+    
+    /**
+     @abstract Configures the client to synchronize all messages up to first unread message in each conversation.
+     If all messages in a given conversations have been marked as read, the client will fetch the last (most recent) message in the conversation in the initial sync.
+     @discussion This is the default synchronization policy, if not specified in the options when initializing the `LYRClient`.
+     */
+    LYRClientSynchronizationPolicyUnreadOnly        = 2,
+    
+    /**
+     @abstract Configures the client to synchronize a target number of messages for each conversation.
+     that needs to be passed along in the options dictionary of the client initializer.
+     */
+    LYRClientSynchronizationPolicyPartialHistory    = 3
+};
+
+typedef NS_ENUM(NSUInteger, LYRMessageSyncOptions) {
+    /**
+     @abstract Using this option with `[conversation synchronizeAllMessages:error:] method will
+     tell the client to synchronize all messages for that conversation.
+     */
+    LYRMessageSyncAll,
+
+    /**
+     @abstract Using this option with `[conversation synchronizeAllMessages:error:] method will
+     tell the client to synchronize all messages up to the first unread mesasge in that conversation.
+     */
+    LYRMessageSyncToFirstUnread
+};
 
 ///---------------------
 /// @name Log Components
@@ -112,31 +136,3 @@ typedef NS_ENUM(NSUInteger, LYRLogLevel) {
     LYRLogLevelDebug,
     LYRLogLevelVerbose
 };
-
-///////////////////////////////////////////////////////////////////////////////////////
-
-/*
- DEPRECATED: Use the `type` property on `LYRObjectChange` instead.
- */
-extern NSString * _Nonnull const LYRObjectChangeTypeKey __deprecated;
-
-/*
- DEPRECATED: Use the `object` property on `LYRObjectChange` instead.
- */
-extern NSString * _Nonnull const LYRObjectChangeObjectKey __deprecated;
-
-/*
- DEPRECATED: Use the `property` property on `LYRObjectChange` instead.
- */
-extern NSString * _Nonnull const LYRObjectChangePropertyKey __deprecated;
-
-/*
- DEPRECATED: Use the `beforeValue` property on `LYRObjectChange` instead.
- */
-extern NSString * _Nonnull const LYRObjectChangeOldValueKey __deprecated;
-
-/*
- DEPRECATED: Use the `afterValue` property on `LYRObjectChange` instead.
- */
-extern NSString * _Nonnull const LYRObjectChangeNewValueKey __deprecated;
-

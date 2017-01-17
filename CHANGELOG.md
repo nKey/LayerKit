@@ -1,5 +1,305 @@
 # LayerKit Change Log
 
+## 0.23.3
+
+#### Bug Fixes
+
+* Fixes an issue where the client might fail to start synchronization process for a conversation upon receiving a remote notification. [APPS-2595]
+* Fixes an issue where the client might throw an exception ("Cannot initialize synchronization manager with `nil` databaseManager.") when transitioning the app from the background into the foreground.
+* Fixes an issue where the client wouldn't finish synchronizing content when woken up by a remote notification with an error "Synchronization from a remote notification could not be completed because synchronization failed to finish in 15 seconds.".
+* `LYRIdentity` object identifier attribute now correctly escapes the `userID` string (this includes the following characters: `:;#@`). [APPS-2627]
+* Fixes an issue where the authenticated user's identity (when accessing `client.authenticatedUser`) might lose all the information (`firstName`, `lastName`, `displayName`, `metadata`... ended up being `nil`). [APPS-2630]
+
+#### Public API Changes
+
+* Made the `createdAt` attribute on the `LYRConversation` nullable, which solves the issues with Swift.
+* Removed dead code around the `LYRActor` class.
+* Updated `LYRQueryController` header documentation.
+
+## 0.23.2
+
+#### Bug Fixes
+
+* The `isConnecting` method of `LYRClient` objects will no longer return `YES` when `isConnected` is also true.
+* Conversation metadata changes more consistent across clients, when mutating it from multiple clients at once.
+
+## 0.23.1
+
+#### Public API Changes
+
+* `LYRQueryController` objects now permit the developer to invoke `execute:` and `executeWithCompletion:` multiple times. This allows for the reconfiguration of queries by mutating the `predicate` or `sortDescriptors` properties of the `LYRQuery` object driving the controller.
+* Setting the `paginationWindow` of an `LYRQueryController` object to zero will now raise an `NSInvalidArgumentException`.
+* The `LYRClientDelegate` method `layerClient:didSwitchToSession:` and `LYRClientDidSwitchSessionNotification` now only get called when client switches between sessions. Previously the client would also notify of the session switch when authenticating for the first time. [APPS-2584]
+
+#### Bug Fixes
+
+* Attempting to wait for an invalid object identifier with the appropriate prefix and number of components (i.e. `layer:///invalid/1234`) will now return an error instead of crashing.
+* Fixes the crash in `LYRClient` creation process, where the internal logic tries to create a background `NSURLSession` and fails to compare the session's delegate with self. This happens due to 3rd party libraries (like Crittercism) that use method swizzling and `NSProxy` objects on `NSURLSessionDelegate`, which causes the pointer comparison to fail. [APPS-2581]
+* The `LYRClient` method `waitForCreationOfObjectWithIdentifier:timeout:completion:` is now guaranteed to always invoke the completion block on the main thread.
+
+## 0.23.0
+
+#### Public API Changes
+
+* The prefix for identifier URIs on `LYRIdentity` objects has changed from `layer:///identity/` to `layer:///identities/`. [APPS-2403]
+* The `LYRClient` method `connectWithCompletion:` will no longer return `NO` and an error when an authentication challenge is encountered.
+* Deauthenticating the client will no longer result in transport being disconnected.
+* Query controllers will no longer emit will and did change notifications if the result set did not change.
+
+#### Enhancements
+
+* Introduced `allObjects` method on `LYRQueryController` to allow access to all matching objects. [APPS-2470]
+* The `createdAt` property of `LYRConversation` is now a synchronized value. [APPS-2433]
+* Event publication is now prioritized at the network level over data retrieval, resulting in faster message sends during cold sync.
+
+#### Bug Fixes
+
+* Fixes an issue where Layer client would not synchronize the full conversation when user gets added to an existing conversation. [APPS-2406]
+* Fixes an issue where Layer client might crash when a conversation got deleted by another participant. [APPS-2406]
+* Fixes an issue where invoking `[client setDebuggingEnabled:YES]` would make the Client duplicate log lines in the log file.
+* Fixes an issue where Layer client might crash during the synchronization process due to an internal collection mutation during enumeration. [APPS-2406]
+* Fixes an issue where Layer client might crash during transport transitions (e.g. from WiFi to Cellular) or when de-authenticating the client. [APPS-2499]
+* Querying using the `In` or `NotIn` predicates with a non-collection value now returns an error instead of throwing an exception. [APPS-2506]
+* Transport is now disconnected when background time expires to prevent a transient issue with hung sockets.
+* Fixes an issue where Layer client might download the same rich content multiple times causing high network bandwidth and CPU usage. [APPS-2511]
+* Fixes an issue where concurrent operations may crash due to thread-safety violations.
+* Fixes an issue where the synchronization process would get caught in an infinite loop trying to download rich content and applying the updates to the `LYRMessagePart` instance. [APPS-2517]
+* Fixed an issue where transport would not be suspended upon entering the background if you are in the midst of connecting.
+* Fixed an issue where auto-detection of an HTTPS proxy would result in connection errors such as "No endpoints available, unable to connect socket". [APPS-2523]
+* Fixed a crash in `LYRConversation` `markAllMessagesAsRead:` method. [APPS-2510]
+* Fixes a crash in the synchronization process related to a conversation created using the Layer CAPI. [APPS-2527]
+* Fixes a crash in the synchronization process related to conversation deletions. [APPS-2541]
+* Querying for an empty metadata dictionary will now return only conversations without metadata instead of all conversations. [APPS-2447]
+* Fixes an issue where Layer client would ignore the rich content auto-download settings after connecting. [APPS-2545]
+* Fixes an issue where the `LYRConversation`'s '`totalNumberOfMessages` would yield the wrong number even on a fully synchronized client.
+* Request failures within `authenticateWithIdentityToken:completion:` were incorrectly handled as status code mismatches. The correct errors are now returned. [APPS-2548]
+* In cases where participants would send messages back and forth at a higher frequency the messages could get out of order. [APPS-2551]
+* Client won't issue authentication challenges during the de-authentication process anymore. [APPS-2553]
+* Fixes a crash when deserializing metadata with conflicting keys which could happen due to a server-side race condition. [APPS-2550]
+* Query controllers that have not been executed will no longer emit delegate updates. [APPS-2560]
+* Fixes background rich content transfers which could get stuck. [APPS-2557]
+
+## 0.22.0
+
+This release includes a number of public API changes to make development with LayerKit easier and more expressive in Swift. We have added real classes and types for configuration `options` that previously accepted dictionaries and modeled typing indicators as a class.
+
+#### Public API Changes
+
+* Introduced the `LYRClientOptions` object which provides for configuring synchronization options for an `LYRClient` instance.
+* The `LYRClient` initialization method has been changed. It now takes an `LYRClientDelegate` instance which is required and the options argument has changed from `NSDictionary` to `LYRClientOptions`.
+* Renamed `LYRClientSynchronizationPolicyMessageCount` to `LYRClientSynchronizationPolicyPartialHistory`.
+* Introduced the `LYRConversationOptions` object meant for configuring conversation instance upon initialization. It replaces the `LYRConversationOptionsMetadataKey`, `LYRConversationOptionsDeliveryReceiptsEnabledKey` and `LYRConversationOptionsDistinctByParticipantsKey` which was previously passed through the options argument with a dictionary.
+* Introduced the `LYRMessageOptions` object meant for configuring message instance upon initialization. It replaces the `LYRMessageOptionsPushNotificationConfigurationKey`, which was previously passed through the options argument with a dictionary.
+* Introduced the `LYRTypingIndicator` object that gets bundles in the `userInfo` of the `LYRConversationDidReceiveTypingIndicatorNotification`. It replaces the previously `NSNumber` wrapped typing indicator ENUM values that were bundled in the notification's `userInfo`.
+
+#### Enhancements
+
+* Improved performance of messaging after the initial synchronization finishes.
+
+#### Bug Fixes
+
+* Fixes an issue where the client wouldn't synchronize a newly received conversation, if the app is brought into the foreground by a remote notification.
+* Fixes a crash that could happen during the synchronization process, when processing deleted conversations.
+* Fixes an issue where the client would synchronize the complete history, even when configured with a different synchronization policy.
+* Fixed a crash in the `LYRExternalContentPreparationOperation` that occurs during cancellation of a Rich Content transfer. [APPS-2476]
+
+## 0.21.1
+
+#### Bug Fixes
+
+* Fixed an issue where a client would receive a new config bag and ignore overwriting the changes in the synchronization logic, which would result in messages not getting published (stuck in pending).
+
+#### Enhancements
+
+* Added a more descriptive logging to message publication logic.
+
+## 0.21.0
+
+#### Enhancements
+
+* Introduced `LYRSession` class to provide applications with the ability to manage multiple user sessions simultaneously.
+* Added functionality to allow applications to switch user sessions without deauthenticating.
+* Performance improvement in the synchronization process.
+
+#### Public API Changes
+
+* Added `LYRSession` object.
+* Added `currentSession` property to `LYRClient`.
+* Added `sessions` property to `LYRClient`.
+* Added `newSessionWithIdentifier:` method to `LYRClient`.
+* Added `sessionWithUserIdentifier:` method to `LYRClient`.
+* Added `switchToSession:error:` method to `LYRClient`.
+* Added `destroySession:error:` method to `LYRClient`.
+* Deprecated `addPolicy:error:` in favor of `addPolicies:error:` and `removePolicy:error:` in favor of `removePolicies:error:` which provides for performing bulk policy operations.
+
+#### Bug Fixes
+
+* Fixes an issue where the client might crash with an exception ('Task created in a session that has been invalidated') during the de-authentication process or then disconnecting the client by hand.
+* Fixes an issue where the client might crash with `EXC_CRASH (SIGABRT)` when it's downloading a lot of message parts at the time.
+* Fixes an issue which caused the client to improperly handle calls to `addPolicy:error` or `removePolicy:error:` when called multiple times in rapid succession.
+* Fixes an issue where the client might crash when trying to handle an internal error.
+* Fixes an issue that could prevent a client from reauthenticating after receiving an authentication challenge.
+* Fixes an issue that could lead to a crash during multiple calls to `deauthenticateWithCompletion:`.
+* Fixes an issue where the client could materialize a deleted conversation with no messages.
+
+## 0.20.5
+
+#### Enhancements
+
+* Added support for querying for `nil` values with the `IsEqualTo` and `IsNotEqual` predicate operators.
+* Performance improvements and enhancements.
+
+## 0.20.4
+
+#### Bug Fixes
+
+* Fixed an issue where some clients had an invalid database state.
+
+## 0.20.3
+
+#### Bug Fixes
+
+* Fixed an issue where some clients received conversations with `nil` participants.
+* Fixes an issue where properties could be improperly set on `LYRConversation` objects.
+* Fixes an issue where in some cases the `totalNumberOfMessages` and `totalNumberOfUnreadMessages` values in `LYRConversation` instance wouldn't get updated correctly.
+* Fixes an issue where client wouldn't synchronize the history of a conversation after the user has been added to an existing conversation.
+* Fixes an issue where a client potentially wouldn't delete a message when deleted with the `LYRDeletionModeAllParticipants` option by another participant.
+
+## 0.20.2
+
+#### Enhancements
+
+* Added functionality to allow users to "leave" a conversation. This has the effect of removing the user from the conversation and and deleting the conversation from all of the authenticated user's devices.
+
+#### Bug Fixes
+
+* Fixed an issue where creating a new unique conversation with the same participants of a deleted conversation caused outgoing messages to be stuck in pending.
+* Fixed an issue where message send could pass validation after participant had been removed from the conversation.
+
+#### Public API Changes
+
+* Client's default sync policy is now `LYRClientSynchronizationPolicyUnreadOnly`, if the policy is not specified in the options argument of the client's designated initializer. Deprecated initializer however will keep the old behaviour, which is the `LYRClientSynchronizationPolicyCompleteHistory`.
+* Added `leave:` method to `LYRConversation`.
+
+#### Enhancements
+
+* Improvements to synchronization performance when deleting content with `LYRDeletionModeMyDevices`.
+
+## 0.20.1
+
+#### Bug Fixes
+
+* Fixes a bug where `LYRConversation`'s `-synchronizeMoreMessages:error:` method would allow to pass zero messages as the first argument; it's now enforced with a validation that passes an error and returns `NO`.
+* Fixes a bug that would cause `LYRClient` to ignore the initialization option `LYRClientSynchronizationPolicyUnreadOnly`.
+
+#### Public API Changes
+
+* The client's `synchronizeWithRemoteNotification:completion:` now immediately returns `NO` if the remote notification payload is not meant for the `LYRClient` or if the method has been invoked while the application is in a fully active state -- in this case, the completion handler won't be called.
+
+## 0.20.0
+
+#### Enhancements
+
+* Layer client can be configured to avoid fully synchronizing the conversation history. It also provides all the necessary functionallity to load more historic content on demand. See `LYRClientSynchronizationPolicy`.
+* Introduced `LYRIdentity` to synchronize user identity with the Layer Client.
+* `waitForCreationOfObjectWithIdentifier:timeout:completion:` will now query for an existing object with the given identifier in the local database and return it immediately upon invocation. This prevents a timeout from triggering in race condition cases where an object is materialized before the wait invocation is made (typically via transport push).
+
+#### Bug Fixes
+
+* Fixed an issue that would prevent the  `LYRQueryControllerDelegate` from reporting changes to a `conversation.lastMesssage` property.
+* Fixed a performance issue where the client performed extra work when it synchronized conversations, which in case of a high volume of conversations looked like a delay in the initial synchronization process.
+
+### Public API Changes
+
+* Added synchronization policies to the client's initialization method: `+clientWithAppID:options:`, see `LYRClientSynchronizationPolicy`.
+* In case the `LYRClient` is initalized to perform a partial synchronization process, more historic messages can be loaded on demand by either calling `LYRConversation`'s `synchronizeMoreMessages:error:` or `synchronizeAllMessages:` method.
+* `LYRConversation` contains two new properties that tell how many messages in total are available or how many unread messages are available in the conversation (even if the client hasn't fully synchronized the history of a conversation).
+* A set of two new notification are introduced that inform when a synchronization process is about to begin `LYRConversationWillBeginSynchronizingNotification` (handing out an `LYRProgress` instance in the userInfo of the notification), and a notification indicating that the synchronization process has completed `LYRConversationDidFinishSynchronizingNotification`.
+* Introduced `LYRIdentity` which replaces `LYRActor` and represents a first class object synchronized by the provider with the Layer platform.
+* `LYRMessage` property `sender` returns an object of type `LYRIdentity`.
+* `LYRConversation` property `participants` returns objects of type `LYRIdentity`.
+* Added `LYRClient` methods `followUserIDs:error:` and `unfollowUserIDs:error:` that allows for explicit following and unfollowing of userIDs to synchronize available identity information with the client. Followed userIDs will receive updates made to that identity, while unfollowing stops all updates and deletes the identity. All conversation participants are implicitly followed and cannot be explicitly followed or unfollowed.
+* Introduced `LYRPredicateOperatorLike` that allows for `LIKE` wildcard querying on `LYRIdentity` properties `firstName`, `lastName`, `displayName`, and `emailAddress`.
+* `LYRClient` property `authenticatedUserID` has been replaced with `LYRIdentity` object authenticatedUser.
+* `LYRClient` method `authenticateWithIdentityToken:completion:` has its completion block parameter changed from a string to a `LYRIdentity` object.
+* `LYRClient` method `newConversationWithParticipants:options:error:` now checks for blocked participants when creating a 1:1 conversations. An attempt to create a conversation with a blocked participant will result in an error.
+
+## 0.19.4
+
+#### Bug Fixes
+
+* Fixes an internal concurrency issue that caused crashes during synchronization.
+
+## 0.19.3
+
+#### Bug Fixes
+
+* Fixes an issue where messages failed to sync in response to push notifications.
+
+## 0.19.2
+
+#### Bug Fixes
+
+* Fixes an issue where the cold-sync process could get stuck.
+* Fixes an issue where `LYRMessagePart.index` would always be `0`.
+* Fixes an issue where a crash could occur after a conversation is deleted.
+* Fixed an issue where messages could not be deleted in the `LYRDeletionModeMyDevices` mode after removal from the conversation.
+* Fixes an issue where a message part transfer might get stuck on `LYRContentTransferDownloading` status.
+* Fixes an issue where a message might be stuck in a "pending" state after an application crash, until a new message is sent.
+* Fixes an issue where an `LYRQueryController` could report changes in a non serial manner. Query controller will now report an error if `execute:` is called while an update is currently in flight.
+
+## 0.19.1
+
+#### Bug Fixes
+
+* Fixed an issue where `synchronizeWithRemoteNotification:completion:` would return an error when invoked when the app is in an inactive state.
+* Updated keychain items to allow access when executing in the background.
+* LayerKit now uses an alternate global symbol for logging to avoid conflicts with CocoaLumberjack.
+
+## 0.19.0
+
+#### Public API Changes
+
+* Removed all deprecated `LayerKit` methods.
+* Replacing the completion block in `synchronizeWithRemoteNotification:completion` to return the `LYRConversation` and `LYRMessage` objects specified in the remote payload instead of the object changes.
+* Introduced `LYRClient` method `waitForCreationOfObjectWithIdentifier:timeout:completion:` that waits the timeout length for creation of the specified identifier's object.
+
+#### Bug Fixes
+
+* Fixes an issue which caused `LYRQueryController` instances to return partially hydrated objects. This could occur when multiple query controllers were attempting to query the same objects from different threads.
+
+## 0.18.1
+
+#### Bug Fixes
+
+* Fixes an issue that would cause the `LYRQueryController` to broadcast `UPDATE` events with a `newIndexPath` parameter.
+* Fixes an issue that could lead to a crash when syncing conversations that contain blocked participants.
+
+## 0.18.0
+
+#### Public API Changes
+
+* Introduced a new deletion mode `LYRDeletionModeMyDevices`, which provides for synchronizing a conversation or message deletion among all of a users devices.
+* Deprecated `LYRDeletionModeLocal` in favor of `LYRDeletionModeMyDevices`.
+
+#### Bug Fixes
+
+* Fixes an issue where attempting to remove a participant would return `TRUE` when the participant was not a participant in the conversation.
+* Fixes an issue that caused the `isSent` property of received messages to not get updated immediately upon receipt.
+
+## 0.17.7
+
+#### Bug Fixes
+
+* Fixes an issue where the `LYRClient` initializer would return nil in certain scenarios when an application is in the background.
+
+## 0.17.6
+
+#### Bug Fixes
+
+* Fixes an issue where iOS would kill the app when kept in the background state for long enough.
+* Fixes an issue where the SDK loses the accessibility of the database files in background when phone is locked and passcode protected, due to iOS data protection. A private build of "sqlite3" built with the SDK was replaced by using the system-wide available "sqlite3lib" library.
+
 ## 0.17.5
 
 #### Public API changes
@@ -89,7 +389,7 @@
 
 * Rewritten the synchronization queuing logic that parallelizes processing per conversation.
 * More reliable push notification handling when using the `synchronizeWithRemoteNotification:completion:` method
-* Added support for building LayerKit as a dynamic framework.  
+* Added support for building LayerKit as a dynamic framework.
 * Added support for bitcode.
 
 ## 0.16.0
@@ -189,7 +489,7 @@
 
 #### Bug Fixes
 
-* Fixed crash caused by attempting to add a participant to a conversation they are already in.   
+* Fixed crash caused by attempting to add a participant to a conversation they are already in.
 * Fixed crash caused by attempting to remove a participant from a conversation they are not in.
 * Fixed crash when dealing with huge numbers of Rich Content parts.
 * Fixed an issue where sent messages' recipient statuses seemed to be stuck on `LYRRecipientStatusPending`, even though messages were successfully sent.
@@ -250,15 +550,12 @@
 
 #### Public API Changes
 
-* The `LYQuery` initializer has been changed from `queryWithClass:` to `queryWithQueryableClass:`. This avoids the need to wrap `class` in backticks
-when initializing a query object in Swift.
-* The `LYRPredicate` initializer has been changed from `predicateWithProperty:operator:value:` to `predicateWithProperty:predicateOperator:value:`.
-This avoids the need to wrap `operator` in backticks when initializing a predicate object in Swift.
+* The `LYQuery` initializer has been changed from `queryWithClass:` to `queryWithQueryableClass:`. This avoids the need to wrap `class` in backticks when initializing a query object in Swift.
+* The `LYRPredicate` initializer has been changed from `predicateWithProperty:operator:value:` to `predicateWithProperty:predicateOperator:value:`. This avoids the need to wrap `operator` in backticks when initializing a predicate object in Swift.
 * `updateRemoteNotificationDeviceToken:error:` now accepts a `nil` value as the `deviceToken` parameter. This un-registers devices from receiving push notifications.
 * Multiple `LYRClient` instances created with the same appID are not allowed anymore, doing so will cause an assertion.
 * Added `markMessagesAsRead:error:` to `LYRClient` to facilitate batch operations.
-* Update `LYRMessagePart` initializers to enforce MIME Type format using the regular expression "/^[^\\s/]+/[^\\s/]+$/". This ensures that Rich Content message parts
-do not get stuck during upload due to having an invalid MIME Type.
+* Update `LYRMessagePart` initializers to enforce MIME Type format using the regular expression "/^[^\\s/]+/[^\\s/]+$/". This ensures that Rich Content message parts do not get stuck during upload due to having an invalid MIME Type.
 
 #### Bug Fixes
 

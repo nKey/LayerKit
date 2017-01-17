@@ -9,8 +9,8 @@
 #import <Foundation/Foundation.h>
 #import "LYRQuery.h"
 #import "LYRConstants.h"
-#import "LYRActor.h"
 #import "LYRPushNotificationConfiguration.h"
+#import "LYRIdentity.h"
 
 @class LYRConversation, LYRMessagePart;
 
@@ -44,6 +44,21 @@ typedef NS_ENUM(NSInteger, LYRRecipientStatus) {
  */
 extern NSString * _Nonnull const LYRMessageOptionsPushNotificationConfigurationKey;
 
+/**
+ @abstract A `LYRMessageOptions` object encapsulates configuration of a newly instantiated `LYRMessage` object meant to be sent out.
+ @discussion Use this class to configure the behavior of a message during the time of the initialization of the
+   `LYRMessage` object instance.
+ */
+@interface LYRMessageOptions : NSObject <NSCoding, NSCopying>
+
+/**
+ @abstract Push notification configuration sent to the Layer services along with the newly initialized `LYRMessage` instance.
+ @discussion @see `LYRPushNotificationConfiguration` for per recipient customization options.
+ */
+@property (nonatomic, copy, nullable) LYRPushNotificationConfiguration *pushNotificationConfiguration;
+
+@end
+
 //------------------------------------------------------------
 
 /**
@@ -69,7 +84,7 @@ extern NSString * _Nonnull const LYRMessageOptionsPushNotificationConfigurationK
  @abstract The conversation that the receiver is a part of.
  @discussion The `conversation` property is queryable via the `LYRPredicateOperatorIsEqualTo`, `LYRPredicateOperatorIsNotEqualTo`, `LYRPredicateOperatorIsIn`, and `LYRPredicateOperatorIsNotIn` operators.
  */
-@property (nonatomic, readonly, nonnull) LYRConversation *conversation LYR_QUERYABLE_PROPERTY LYR_QUERYABLE_FROM(LYRMessagePart);
+@property (nonatomic, readonly, nullable) LYRConversation *conversation LYR_QUERYABLE_PROPERTY LYR_QUERYABLE_FROM(LYRMessagePart);
 
 /**
  @abstract An array of message parts (modeled by the `LYRMessagePart` class) that provide access to the content of the receiver.
@@ -107,9 +122,9 @@ extern NSString * _Nonnull const LYRMessageOptionsPushNotificationConfigurationK
 
 /**
  @abstract The sender who sent the message.
- @discussion The `sender` can be an authenticated user or from a platform, specificed by the sender's properties `userID` and `name`.  They are mutually exclusive.  Both properties are queryable from `LYRMessage`.
+ @discussion The `sender` can be an authenticated user or from a platform, specificed by the sender's properties `userID` and `name`. They are mutually exclusive. The sender's `userID` and `name` properties are queryable from `LYRMessage`.
  */
-@property (nonatomic, readonly, nonnull) LYRActor *sender;
+@property (nonatomic, readonly, nonnull) LYRIdentity *sender;
 
 ///----------------------
 /// @name Marking as Read
@@ -129,7 +144,7 @@ extern NSString * _Nonnull const LYRMessageOptionsPushNotificationConfigurationK
 
 /**
  @abstract Deletes a message in the specified mode.
- @param mode The deletion mode, specifying how the message is to be deleted (i.e. locally or synchronized across participants).
+ @param mode The deletion mode, specifying how the message is to be deleted (i.e. for only the currently authenticated user's devices or synchronized across participants).
  @param error A pointer to an error that upon failure is set to an error object describing why the deletion failed.
  @return A Boolean value indicating if the request to delete the message was submitted for synchronization.
  @raises NSInvalidArgumentException Raised if `message` is `nil`.
@@ -153,45 +168,5 @@ extern NSString * _Nonnull const LYRMessageOptionsPushNotificationConfigurationK
  @return An `LYRRecipientStatus` value specifying the message status for the given participant or `LYRRecipientStatusInvalid` if the specified user is not a participant in the conversation.
  */
 - (LYRRecipientStatus)recipientStatusForUserID:(nonnull NSString *)userID;
-
-@end
-
-// Deprecated.  Use `LYRMessageOptionsPushNotificationConfigurationKey` key and `LYRPushNotificationConfiguration` instead.
-extern NSString * _Nonnull const LYRMessageOptionsPushNotificationAlertKey __deprecated;
-
-// Deprecated.  Use `LYRMessageOptionsPushNotificationConfigurationKey` key and `LYRPushNotificationConfiguration` instead.
-extern NSString * _Nonnull const LYRMessageOptionsPushNotificationSoundNameKey __deprecated;
-/**
- Deprecated configuration:
- NSError *error;
- NSDictionary *pushOptions = @{LYRMessageOptionsPushNotificationAlertKey : @"push alert text",
- LYRMessageOptionsPushNotificationSoundNameKey : @"chime.aiff"};
- LYRMessage *message = [self.layerClient newMessageWithParts:parts options:pushOptions error:&error];
- 
- New Configuration:
- NSError *error;
- LYRPushNotificationConfiguration *configuration = [LYRPushNotificationConfiguration new];
- configuration.alert = @"push alert text";
- configuration.sound = @"chime.aiff";
- NSDictionary *pushOptions = @{ LYRMessageOptionsPushNotificationConfigurationKey: configuration };
- LYRMessage *message = [self.layerClient newMessageWithParts:parts options:pushOptions error:&error];
- */
-
-// Deprecated.  Use `LYRMessageOptionsPushNotificationConfigurationKey` key and `LYRPushNotificationConfiguration` instead.
-extern NSString * _Nonnull const LYRMessageOptionsPushNotificationPerRecipientConfigurationKey __deprecated;
-
-// Deprecated. Use `LYRMessageOptionsPushNotificationAlertKey` instead.
-extern NSString * _Nonnull const LYRMessagePushNotificationAlertMessageKey __deprecated;
-
-// Deprecated. Use `LYRMessageOptionsPushNotificationSoundNameKey:` instead.
-extern NSString * _Nonnull const LYRMessagePushNotificationSoundNameKey __deprecated;
-
-@interface LYRMessage (Deprecated_Nonfunctional)
-
-// Deprecated.  Use `LYRActor` property `userID` instead.
-@property (nonatomic, readonly, nonnull) NSString *sentByUserID __deprecated;
-
-// Deprecated. Use `LYRClient newMessageWithParts:options:error:` with `LYRConversation sendMessage:error:` instead.
-+ (nonnull instancetype)messageWithConversation:(nonnull LYRConversation *)conversation parts:(nonnull NSArray<LYRMessagePart *> *)messageParts __deprecated;
 
 @end

@@ -63,7 +63,16 @@ typedef NS_ENUM(NSUInteger, LYRPredicateOperator) {
     /**
      @abstract The property's value is not contained in the given collection of values.
      */
-    LYRPredicateOperatorIsNotIn
+    LYRPredicateOperatorIsNotIn,
+    
+    ///---------------------
+    /// @name Like Operators
+    ///---------------------
+    
+    /**
+     @abstract The property's value partial string matches the given value.
+     */
+    LYRPredicateOperatorLike
 };
 
 /**
@@ -154,12 +163,5 @@ typedef NS_ENUM(NSUInteger, LYRCompoundPredicateType) {
  @abstract The receiver's subpredicates;
  */
 @property (nonatomic, readonly, nonnull) NSArray *subpredicates;
-
-@end
-
-@interface LYRPredicate (Deprecated)
-
-// DEPRECATED: Use `LYRPredicate`'s `predicateWithProperty:predicateOperator:value:` instead.
-+ (nonnull instancetype)predicateWithProperty:(nonnull NSString *)property operator:(LYRPredicateOperator)predicateOperator value:(nullable id)value __deprecated;
 
 @end

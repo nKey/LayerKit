@@ -11,37 +11,123 @@
 #import "LYRConstants.h"
 
 @class LYRMessage;
+@class LYRIdentity;
 
 ///---------------------------
 /// @name Conversation Options
 ///---------------------------
 
 /**
- @abstract The option key for configuring metadata during Conversation creation.
- @discussion The `LYRConversationOptionsMetadataKey` enables developers to configure metadata on the conversation at the moment it is created, guaranteeing that the
- metadata will be available on the conversation when the change notification is published. The value given must be an `NSDictionary` of `NSString` key-value pairs. The 
- functionality provided is identical to calling `setValuesForMetadataKeyPathsWithDictionary:merge:` with a `merge` argument of `NO` on the conversation after initialization.
+ @abstract A `LYRConversationOptions` object encapsulates configuration of an `LYRConversation` object.
+ @discussion Use this class to configure the behavior of a conversation during the time of the initialization
+ of the `LYRConversation` object instance.
  */
-extern NSString * _Nonnull const LYRConversationOptionsMetadataKey;
+@interface LYRConversationOptions : NSObject <NSCoding, NSCopying>
 
 /**
- @abstract The option key for configuring whether or not clients should write delivery receipts for messages in the conversation.
- @discussion When `YES`, clients will write delivery receipts and a delineation will be made between `LYRRecipientStatusSent` and `LYRRecipientStatusDelivered`. When `NO`,
- messages will remain in the `LYRRecipientStatusSent` state until explicitly marked as read. Disabling delivery receipts improves performance for conversations that
- do not benefit from them.
+ @abstract It configures whether or not Conversations are created such that they are guaranteed to be a
+ single distinctive Conversation among the set of participants.
+ @discussion Because Layer supports offline use-cases and sets of users may attempt to communicate among
+ identical groups concurrently, it is possible to inadvertently create Conversations that from the end-user
+ perspective appear as separate threads where they were expecting a single one to exist. This behavior can
+ be addressed by requesting Layer to create a Conversation that is distinct among the set of participants
+ via this `distinctByParticipants` boolean flag. When `YES`, Layer will guarantee that among the initial set
+ of participants there will exist one (and only one) distinct Conversation. This guarantee will persist
+ until the participants list is modified as the mutation may result in an overlap with existing Conversations.
+ When `NO`, the distinctive guarantee is not requested and a new Conversation will be created among the set
+ of participants without regard for any existing Conversations (distinct or otherwise).
+ @discussion Default value is `YES`.
  */
-extern NSString * _Nonnull const LYRConversationOptionsDeliveryReceiptsEnabledKey;
+@property (nonatomic, assign) BOOL distinctByParticipants;
 
 /**
- @abstract The option key for configuring whether or not Conversations are created such that they are guaranteed to be a single distinctive Conversation among the set of participants.
- @discussion Because Layer supports offline use-cases and sets of users may attempt to communicate among identical groups concurrently, it is possible to inadvertently create Conversations that
- from the end-user perspective appear as separate threads where they were expecting a single one to exist. This behavior can be addressed by requesting Layer to create a Conversation that is distinct
- among the set of participants via the `LYRConversationOptionsDistinctByParticipantsKey` option key. When `YES`, Layer will guarantee that among the initial set of participants there will exist one (and only one)
- distinct Conversation. This guarantee will persist until the participants list is modified as the mutation may result in an overlap with existing Conversations. When `NO`, the distinctive guarantee is not requested
- and a new Conversation will be created among the set of participants without regard for any existing Conversations
- (distinct or otherwise).
+ @abstract When `YES`, clients will write delivery receipts and a delineation will be made between
+ `LYRRecipientStatusSent` and `LYRRecipientStatusDelivered`. When `NO`, messages will remain in the
+ `LYRRecipientStatusSent` state until explicitly marked as read. Disabling delivery receipts improves
+ performance for conversations that do not benefit from them.
+ @discussion Default value is `YES`.
  */
-extern NSString * _Nonnull const LYRConversationOptionsDistinctByParticipantsKey;
+@property (nonatomic, assign) BOOL deliveryReceiptsEnabled;
+
+/**
+ @abstract The `metadata` property enables developers to configure metadata on the `LYRConversation` instance
+ at the moment it is created, guaranteeing that the metadata will be available on the conversation when the
+ change notification is published. The value given must be an `NSDictionary` of `NSString` key-value pairs. The
+ functionality provided is identical to calling `setValuesForMetadataKeyPathsWithDictionary:merge:` with a
+ `merge` argument of `NO` on the conversation after initialization.
+ */
+@property (nonatomic, strong, nullable) NSDictionary *metadata;
+
+@end
+
+///------------------------------------
+/// @name Typing Indicator Notification
+///------------------------------------
+
+/**
+ @abstract Posted when a conversation object receives a change in typing indicator state.
+ @discussion The `object` of the `NSNotification` is the `LYRConversation` that received the typing indicator.
+ */
+extern NSString * _Nonnull const LYRConversationDidReceiveTypingIndicatorNotification;
+
+/**
+ @abstract A key into the user info of a `LYRConversationDidReceiveTypingIndicatorNotification` notification whose value is
+ an `LYRTypingIndicator` instance containing the typing indicator action and the participant's identity that caused the action.
+ */
+extern NSString * _Nonnull const LYRTypingIndicatorObjectUserInfoKey;
+
+///-----------------------
+/// @name Typing Indicator
+///-----------------------
+
+/**
+ @abstract The `LYRTypingIndicatorAction` enumeration describes the states of a typing status of a participant in a conversation.
+ */
+typedef NS_ENUM(NSUInteger, LYRTypingIndicatorAction) {
+    LYRTypingIndicatorActionBegin   = 0,
+    LYRTypingIndicatorActionPause   = 1,
+    LYRTypingIndicatorActionFinish  = 2
+};
+
+/**
+ @abstract The `LYRTypingIndicator` object encapsulated the typing indicator action value and the participant
+ identity which is bundled in the `LYRConversationDidReceiveTypingIndicatorNotification`'s userInfo.
+ */
+@interface LYRTypingIndicator : NSObject
+
+/**
+ @abstract The action value that represents the last typing indicator state that the participant caused.
+ */
+@property (nonatomic, readonly) LYRTypingIndicatorAction action;
+
+/**
+ @abstract Participant that caused the last typing indicator action.
+ */
+@property (nonatomic, readonly, nonnull) LYRIdentity *sender;
+
+@end
+
+///-------------------------------------------------
+/// @name Conversation Synchronization Notifications
+///-------------------------------------------------
+
+/**
+ @abstract Posted when a synchronization process for a specific conversation will begin.
+ @discussion The `object` of the `NSNotification` is the `LYRConversation` that will begin the synchronization process.
+ */
+extern NSString * _Nonnull const LYRConversationWillBeginSynchronizingNotification;
+
+/**
+ @abstract Posted when a synchronization process for a specific conversation finished.
+ @discussion The `object` of the `NSNotification` is the `LYRConversation` that has finished the synchronization process.
+ */
+extern NSString * _Nonnull const LYRConversationDidFinishSynchronizingNotification;
+
+/**
+ @abstract A key into the user info of a `LYRConversationWillBeginSynchronizingNotification` notification whose value is
+ an `LYRProgress` tracking the progress of the synchronization process.
+ */
+extern NSString * _Nonnull const LYRConversationSynchronizationProgressUserInfoKey;
 
 //------------------------------------------------------------
 
@@ -66,15 +152,15 @@ extern NSString * _Nonnull const LYRConversationOptionsDistinctByParticipantsKey
  The `participants` property is queryable via the `LYRPredicateOperatorIsEqualTo`, `LYRPredicateOperatorIsNotEqualTo`, `LYRPredicateOperatorIsIn`, and `LYRPredicateOperatorIsNotIn` operators. For convenience, 
  queries with an equality predicate (`LYRPredicateOperatorIsEqualTo` and `LYRPredicateOperatorIsNotEqualTo`) for the `participants` property will implicitly include the authenticated user.
  */
-@property (nonatomic, readonly, nonnull) NSSet<NSString *> *participants LYR_QUERYABLE_PROPERTY;
+@property (nonatomic, readonly, nonnull) NSSet<LYRIdentity *> *participants LYR_QUERYABLE_PROPERTY;
 
 /**
  @abstract The date and time that the conversation was created.
- @discussion This value specifies the time that receiver was locally created and will vary across devices.
+ @discussion This value specifies the time that the conversation was created on the Layer backend and is sychronized across devices.
  
  The `createdAt` property is queryable using all predicate operators.
  */
-@property (nonatomic, readonly, nonnull) NSDate *createdAt LYR_QUERYABLE_PROPERTY;
+@property (nonatomic, readonly, nullable) NSDate *createdAt LYR_QUERYABLE_PROPERTY;
 
 /**
  @abstract Returns the last Message recevied or sent in this Conversation.
@@ -185,9 +271,9 @@ extern NSString * _Nonnull const LYRConversationOptionsDistinctByParticipantsKey
 
 /**
  @abstract Sends a typing indicator to the conversation.
- @param typingIndicator An `LYRTypingIndicator` value indicating the change in typing state to be sent.
+ @param typingIndicator An `LYRTypingIndicatorAction` value indicating the change in typing state to be sent.
  */
-- (void)sendTypingIndicator:(LYRTypingIndicator)typingIndicator;
+- (void)sendTypingIndicator:(LYRTypingIndicatorAction)typingIndicatorAction;
 
 ///--------------------------------
 /// @name Deleting the Conversation
@@ -196,12 +282,24 @@ extern NSString * _Nonnull const LYRConversationOptionsDistinctByParticipantsKey
 /**
  @abstract Deletes a conversation in the specified mode.
  @discussion This method deletes a conversation and all associated messages for all current participants.
- @param mode The deletion mode, specifying how the message is to be deleted (i.e. locally or synchronized across participants).
+ @param mode The deletion mode, specifying how the message is to be deleted (i.e. for only the currently authenticated user' devices or synchronized across participants).
  @param error A pointer to an error that upon failure is set to an error object describing why the deletion failed.
  @return A Boolean value indicating if the request to delete the conversation was submitted for synchronization.
- @raises NSInvalidArgumentException Raised if `message` is `nil`.
  */
 - (BOOL)delete:(LYRDeletionMode)deletionMode error:(NSError * _Nullable * _Nullable)error __attribute__((swift_error(none)));
+
+///--------------------------------
+/// @name Leaving the Conversation
+///--------------------------------
+
+/**
+ @abstract Leaves the conversation.
+ @discussion This method removes the authenticated user from the conversation and deletes the conversation from all of their devices.
+ @param error A pointer to an error that upon failure is set to an error object describing why the deletion failed.
+ @return A Boolean value indicating if the request to leave the conversation was submitted for synchronization.
+ @discussion A user can only leave a conversation if they are a current participant and the conversation has not been deleted.
+ */
+- (BOOL)leave:(NSError * _Nullable * _Nullable)error __attribute__((swift_error(none)));
 
 ///-----------------------------------
 /// @name Marking All Messages as Read
@@ -214,11 +312,35 @@ extern NSString * _Nonnull const LYRConversationOptionsDistinctByParticipantsKey
  */
 - (BOOL)markAllMessagesAsRead:(NSError * _Nullable * _Nullable)error;
 
-@end
+///-------------------------------------------
+/// @name Synchronization of Historic Messages
+///-------------------------------------------
 
-@interface LYRConversation (Deprecated_Nonfunctional)
+/**
+ @abstract Property gives the total number of messages in the conversation, even in case when not all the messages have been synchronized with the client.
+ */
+@property (nonatomic, readonly) NSUInteger totalNumberOfMessages;
 
-// Deprecated. Use `LYRClient newConversationWithParticipants:options:error:` instead.
-+ (nonnull instancetype)conversationWithParticipants:(nonnull NSSet<NSString *> *)participants __deprecated;
+/**
+ @abstract Property gives the total number of unread messages in the conversation, even in case when not all the messages have been synchronized with the client.
+ */
+@property (nonatomic, readonly) NSUInteger totalNumberOfUnreadMessages;
+
+/**
+ @abstract Tells the client to synchronize more historic messages that are in the conversation.
+ @param minimumNumberOfMessages The number of historic messages the client should try to fetch during synchronization; value should be greated than zero.
+ @param error A pointer to an error object that, upon failure, will be set to an error describing why the synchronization process could not be performed.
+ @return `YES` in case the request for the operation was successfull; otherwise `NO`.
+ */
+- (BOOL)synchronizeMoreMessages:(NSUInteger)minimumNumberOfMessages error:(NSError * _Nullable * _Nullable)error;
+
+/**
+ @abstract Tells the client to synchronize all historic messages or all unread messages that haven't been synchronized with this client yet.
+ @param messageSyncOption If used with `LYRMessageSyncToFirstUnread`, the client will try to only synchronize all messages up to the first unread message found in the conversation;
+ if `LYRMessageSyncAll` is passed, the client will load all historic messages in the conversation.
+ @param error A pointer to an error object that, upon failure, will be set to an error describing why the synchronization process could not be performed.
+ @return `YES` in case the request for the operation was successfull; otherwise `NO`.
+ */
+- (BOOL)synchronizeAllMessages:(LYRMessageSyncOptions)messageSyncOption error:(NSError * _Nullable * _Nullable)error;
 
 @end
